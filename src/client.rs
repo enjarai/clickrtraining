@@ -91,12 +91,16 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                                                 }
                                             }
                                             _ => {
-                                                info!("Ba-bump");
+                                                if args.verbose {
+                                                    info!("Ba-bump");
+                                                }
                                             }
                                         }
                                     }
                                     _ => {
-                                        info!("Ba-bump");
+                                        if args.verbose {
+                                            info!("Ba-bump");
+                                        }
                                     }
                                 }
                             }
