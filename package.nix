@@ -19,7 +19,7 @@ rustPlatform.buildRustPackage rec {
     pkgconf
   ];
 
-  cargoLock.lockFile = ./Cargo.lock;
+  cargoLock.lockFile = src + /Cargo.lock;
   doCheck = false;
 
   meta = with lib; {
