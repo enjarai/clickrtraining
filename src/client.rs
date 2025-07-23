@@ -1,15 +1,17 @@
 use core::str;
+use std::time::Duration;
+
 #[cfg(feature = "audio")]
 use std::{fs::File, io::Cursor, path::PathBuf};
-use std::{time::Duration};
 
 use anyhow::Result;
 use awc::ws::Frame::Text;
 use futures::StreamExt;
 use log::{info, warn};
+use tokio::time::{sleep, timeout};
+
 #[cfg(feature = "audio")]
 use rodio::Decoder;
-use tokio::time::{sleep, timeout};
 
 use crate::{build_room_url, ClientArgs};
 
@@ -40,11 +42,11 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                 info!("Connected! HTTP response: {res:?}");
 
                 #[cfg(feature = "audio")]
-                {
-                    let (_stream, stream_handle) = rodio::OutputStream::try_default()?;
-                    let sink = rodio::Sink::try_new(&stream_handle)?;
-                    sink.set_volume(args.volume);
-                }
+                let (_stream, stream_handle) = rodio::OutputStream::try_default()?;
+                #[cfg(feature = "audio")]
+                let sink = rodio::Sink::try_new(&stream_handle)?;
+                #[cfg(feature = "audio")]
+                sink.set_volume(args.volume);
 
                 loop {
                     match timeout(Duration::from_secs(20), ws.next()).await {
@@ -56,8 +58,6 @@ pub async fn start(args: ClientArgs) -> Result<()> {
 
                                         #[cfg(feature = "audio")]
                                         {
-                                            let (_stream, _stream_handle) =
-                                                rodio::OutputStream::try_default()?;
                                             let source = Decoder::new(Cursor::new(include_bytes!(
                                                 "../static/sound.ogg"
                                             )))?;
@@ -75,8 +75,7 @@ pub async fn start(args: ClientArgs) -> Result<()> {
 
                                                 #[cfg(feature = "audio")]
                                                 {
-                                                    let mut path =
-                                                        PathBuf::from(sounds_directory.as_ref());
+                                                    let mut path = PathBuf::from(sounds_directory.as_ref());
                                                     path.push(sound_name.replace(".", ""));
                                                     path.set_extension("ogg");
 
@@ -84,7 +83,7 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                                                         let source = Decoder::new(file)?;
 
                                                         sink.append(source);
-                                                        // sink.sleep_until_end();
+                                                        sink.sleep_until_end();
                                                     } else {
                                                         info!("Could not find file: {}", path.to_str().unwrap_or("?"));
                                                     }
