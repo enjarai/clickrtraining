@@ -6,9 +6,13 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "clickrtraining";
-  version = "dev.1";
+  version = "0.1.0";
 
   src = ./.;
+
+  postInstall = ''
+    cp -r static $out/static
+  '';
 
   buildInputs = [
     alsa-lib
