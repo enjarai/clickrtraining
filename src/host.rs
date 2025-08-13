@@ -13,8 +13,9 @@ use actix_web::{
 };
 use actix_ws::Session;
 use anyhow::{anyhow, Context, Result};
-use log::info;
+use log::{error, info};
 use once_cell::sync::Lazy;
+use prometheus::{register_int_counter, register_int_gauge, Encoder as _, IntCounter, IntGauge, TextEncoder};
 use rand::{rngs::StdRng, seq::IndexedRandom, SeedableRng};
 use random_word::Lang;
 use tokio::{
@@ -29,6 +30,11 @@ static CLIENTS: Lazy<Mutex<HashMap<String, Vec<Client>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 static WORDS: Lazy<&'static [&'static str]> =
     Lazy::new(|| random_word::all_len(8, Lang::En).unwrap());
+
+static CLICKS_COUNTER: Lazy<IntCounter> =
+    Lazy::new(|| register_int_counter!("training_clicks", "The amount of clicks received").unwrap());
+static LISTENERS_GAUGE: Lazy<IntGauge> =
+    Lazy::new(|| register_int_gauge!("training_listeners", "The amount of clients listening for clicks").unwrap());
 
 struct Client {
     session: Session,
@@ -48,6 +54,7 @@ async fn listen(
     let (res, session, _stream) = actix_ws::handle(&req, stream)?;
     let word = get_word(&req);
 
+    LISTENERS_GAUGE.inc();
     CLIENTS
         .lock()
         .await
@@ -69,6 +76,7 @@ async fn click(req: HttpRequest, id: web::Path<String>) -> impl Responder {
     if let Some(sessions) = CLIENTS.lock().await.get_mut(&id.to_string()) {
         send_or_drop(sessions, "c").await;
 
+        CLICKS_COUNTER.inc();
         info!("'{}' clicked room '{id}'", get_word(&req));
 
         HttpResponse::Ok().finish()
@@ -100,17 +108,45 @@ async fn custom_sound(req: HttpRequest, path: web::Path<(String, String)>) -> im
     }
 }
 
+#[get("/metrics")]
+async fn metrics(req: HttpRequest) -> impl Responder {
+    let token = req.app_data::<ServerArgs>().unwrap().metrics_token.as_ref();
+    if let Some(value) = req.headers().get("Authorization") 
+            && let Ok(header) = value.to_str()
+            && header.starts_with("Bearer ")
+            && header["Bearer ".len()..header.len()] == *token.unwrap() {
+
+        let mut buffer = Vec::new();
+        let encoder = TextEncoder::new();
+        let metric_families = prometheus::gather();
+        if let Err(err) = encoder.encode(&metric_families, &mut buffer) {
+            error!("Error providing metrics: {}", err);
+            return HttpResponse::InternalServerError().finish();
+        }
+        return HttpResponse::Ok().body(buffer);
+    }
+    HttpResponse::ImATeapot().finish()
+}
+
 pub async fn start(args: ServerArgs) -> Result<()> {
     spawn(heartbeat());
+    let args2 = args.clone();
 
-    let server = HttpServer::new(|| {
-        App::new()
+    CLICKS_COUNTER.reset();
+    LISTENERS_GAUGE.set(0);
+
+    let server = HttpServer::new(move || {
+        let mut app = App::new()
+            .app_data(args.clone())
             .service(listen)
             .service(click)
-            .service(custom_sound)
-            .service(Files::new("/", "./static").index_file("index.html"))
+            .service(custom_sound);
+        if args.metrics_token.is_some() {
+            app = app.service(metrics);
+        }
+        app.service(Files::new("/", "./static").index_file("index.html"))
     })
-    .bind((args.addr, args.port))
+    .bind((args2.addr, args2.port))
     .context("Failed to bind address")?;
 
     info!("Server configured, running...");
@@ -139,16 +175,18 @@ async fn send_or_drop(clients: &mut Vec<Client>, msg: &str) {
 
     for client in clients.iter_mut() {
         match timeout(Duration::from_millis(500), client.session.text(msg)).await {
-            Ok(_) => {
+            Ok(Ok(_)) => {
                 do_retain.push(true);
             }
             //TODO: this seems to be the cause of the random disconnects
-            // Ok(Err(e)) => {
-            //     info!("A client has disconnected: {e}");
-            //     do_retain.push(false);
-            // }
+            Ok(Err(e)) => {
+                info!("A client has disconnected: {e}");
+                LISTENERS_GAUGE.dec();
+                do_retain.push(false);
+            }
             Err(e) => {
                 info!("'{}' has timed out: {e}", client.word);
+                LISTENERS_GAUGE.dec();
                 do_retain.push(false);
             }
         }

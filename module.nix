@@ -56,6 +56,12 @@
         default = 8098;
         description = "The port to listen on.";
       };
+
+      metricsToken = mkOption {
+        type = str;
+        default = null;
+        description = "The token to use to access metrics. Enables the metrics endpoint.";
+      };
     };
 
     config = mkIf cfg.enable {
@@ -75,7 +81,8 @@
             User = cfg.user;
             Group = cfg.group;
             WorkingDirectory = cfg.package;
-            ExecStart = "${cfg.package}/bin/clickrtraining host --addr ${cfg.address} --port ${toString cfg.port}";
+            ExecStart = "${cfg.package}/bin/clickrtraining host --addr ${cfg.address} --port ${toString cfg.port}" 
+              + (if cfg.metricsToken == null then "" else " --metrics-token '${cfg.metricsToken}'");
             Restart = "always";
           };
         };

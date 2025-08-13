@@ -29,8 +29,10 @@ struct ServerArgs {
     verbose: bool,
     #[arg(short, long, help = "The address to listen on")]
     addr: String,
-    #[arg(short, long, default_value_t = 443, help = "The port to listen on")]
+    #[arg(short, long, default_value_t = 80, help = "The port to listen on")]
     port: u16,
+    #[arg(short, long, help = "The token to use to authenticate with the metrics endpoint. Enables the metrics endpoint when specified")]
+    metrics_token: Option<String>,
 }
 
 #[derive(clap::Args, Debug, Clone)]
