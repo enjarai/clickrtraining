@@ -1,5 +1,6 @@
 use core::str;
 use std::time::Duration;
+
 #[cfg(feature = "audio")]
 use std::{fs::File, io::Cursor, path::PathBuf};
 
@@ -7,9 +8,10 @@ use anyhow::Result;
 use awc::ws::Frame::Text;
 use futures::StreamExt;
 use log::{info, warn};
+use tokio::time::{sleep, timeout};
+
 #[cfg(feature = "audio")]
 use rodio::Decoder;
-use tokio::time::{sleep, timeout};
 
 use crate::{build_room_url, ClientArgs};
 
@@ -72,8 +74,7 @@ pub async fn start(args: ClientArgs) -> Result<()> {
 
                                                 #[cfg(feature = "audio")]
                                                 {
-                                                    let mut path =
-                                                        PathBuf::from(sounds_directory.as_ref());
+                                                    let mut path = PathBuf::from(sounds_directory.as_ref());
                                                     path.push(sound_name.replace(".", ""));
                                                     path.set_extension("ogg");
 
@@ -81,7 +82,7 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                                                         let source = Decoder::new(file)?;
 
                                                         sink.append(source);
-                                                        // sink.sleep_until_end();
+                                                        sink.sleep_until_end();
                                                     } else {
                                                         info!(
                                                             "Could not find file: {}",
@@ -91,12 +92,16 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                                                 }
                                             }
                                             _ => {
-                                                info!("Ba-bump");
+                                                if args.verbose {
+                                                    info!("Ba-bump");
+                                                }
                                             }
                                         }
                                     }
                                     _ => {
-                                        info!("Ba-bump");
+                                        if args.verbose {
+                                            info!("Ba-bump");
+                                        }
                                     }
                                 }
                             }

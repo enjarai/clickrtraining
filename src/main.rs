@@ -25,6 +25,8 @@ enum Command {
 #[derive(clap::Args, Debug, Clone)]
 #[command(about = "Host a clickrtraining instance", long_about = None)]
 struct ServerArgs {
+    #[arg(short, long, help = "Whenever or not to enable verbose output")]
+    verbose: bool,
     #[arg(short, long, help = "The address to listen on")]
     addr: String,
     #[arg(short, long, default_value_t = 443, help = "The port to listen on")]
@@ -34,11 +36,9 @@ struct ServerArgs {
 #[derive(clap::Args, Debug, Clone)]
 #[command(about = "Listen for clicks in a room", long_about = None)]
 struct ClientArgs {
-    #[arg(
-        long,
-        default_value = "wss",
-        help = "The protocol to use when connecting to the host"
-    )]
+    #[arg(short, long, help = "Whenever or not to enable verbose output")]
+    verbose: bool,
+    #[arg(long, default_value = "wss", help = "The protocol to use when connecting to the host")]
     protocol: String,
     #[arg(
         short,
@@ -70,11 +70,9 @@ struct ClientArgs {
 #[derive(clap::Args, Debug, Clone)]
 #[command(about = "Click a room", long_about = None)]
 struct ClickArgs {
-    #[arg(
-        long,
-        default_value = "https",
-        help = "The protocol to use when connecting to the host"
-    )]
+    #[arg(short, long, help = "Whenever or not to enable verbose output")]
+    verbose: bool,
+    #[arg(long, default_value = "https", help = "The protocol to use when connecting to the host")]
     protocol: String,
     #[arg(
         short,
