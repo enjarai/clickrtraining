@@ -7,9 +7,7 @@ use std::{
 
 use actix_files::Files;
 use actix_web::{
-    get,
-    web::{self, Payload},
-    App, HttpRequest, HttpResponse, HttpServer, Responder,
+    get, http::header::ContentType, web::{self, Payload}, App, HttpRequest, HttpResponse, HttpServer, Responder
 };
 use actix_ws::Session;
 use anyhow::{anyhow, Context, Result};
@@ -123,7 +121,9 @@ async fn metrics(req: HttpRequest) -> impl Responder {
             error!("Error providing metrics: {}", err);
             return HttpResponse::InternalServerError().finish();
         }
-        return HttpResponse::Ok().body(buffer);
+        return HttpResponse::Ok()
+            .append_header(ContentType::plaintext())
+            .body(buffer);
     }
     HttpResponse::ImATeapot().finish()
 }
