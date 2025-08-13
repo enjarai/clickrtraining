@@ -1,7 +1,7 @@
 use core::str;
+use std::time::Duration;
 #[cfg(feature = "audio")]
 use std::{fs::File, io::Cursor, path::PathBuf};
-use std::{time::Duration};
 
 use anyhow::Result;
 use awc::ws::Frame::Text;
@@ -31,20 +31,17 @@ pub async fn start(args: ClientArgs) -> Result<()> {
     let url = url.build();
 
     loop {
-        match client
-            .ws(&url)
-            .connect()
-            .await
-        {
+        match client.ws(&url).connect().await {
             Ok((res, mut ws)) => {
                 info!("Connected! HTTP response: {res:?}");
 
                 #[cfg(feature = "audio")]
-                {
+                let sink = {
                     let (_stream, stream_handle) = rodio::OutputStream::try_default()?;
                     let sink = rodio::Sink::try_new(&stream_handle)?;
                     sink.set_volume(args.volume);
-                }
+                    sink
+                };
 
                 loop {
                     match timeout(Duration::from_secs(20), ws.next()).await {
@@ -58,9 +55,9 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                                         {
                                             let (_stream, _stream_handle) =
                                                 rodio::OutputStream::try_default()?;
-                                            let source = Decoder::new(Cursor::new(include_bytes!(
-                                                "../static/sound.ogg"
-                                            )))?;
+                                            let source = Decoder::new(Cursor::new(
+                                                include_bytes!("../static/sound.ogg"),
+                                            ))?;
 
                                             sink.append(source);
                                             sink.sleep_until_end();
@@ -71,7 +68,7 @@ pub async fn start(args: ClientArgs) -> Result<()> {
 
                                         match parts.as_slice() {
                                             ["s", sound_name] => {
-                                                info!("Playing custom sound! '{}'", sound_name);
+                                                info!("Playing custom sound! '{sound_name}'");
 
                                                 #[cfg(feature = "audio")]
                                                 {
@@ -86,7 +83,10 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                                                         sink.append(source);
                                                         // sink.sleep_until_end();
                                                     } else {
-                                                        info!("Could not find file: {}", path.to_str().unwrap_or("?"));
+                                                        info!(
+                                                            "Could not find file: {}",
+                                                            path.to_str().unwrap_or("?")
+                                                        );
                                                     }
                                                 }
                                             }

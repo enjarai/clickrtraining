@@ -55,7 +55,7 @@ async fn listen(
         .or_default()
         .push(Client { session, word });
 
-    info!("'{word}' has connected to room '{}'.", id);
+    info!("'{word}' has connected to room '{id}'.");
 
     Ok(res)
 }
@@ -78,10 +78,7 @@ async fn click(req: HttpRequest, id: web::Path<String>) -> impl Responder {
 }
 
 #[get("/api/{id}/custom/{name}")]
-async fn custom_sound(
-    req: HttpRequest,
-    path: web::Path<(String, String)>
-) -> impl Responder {
+async fn custom_sound(req: HttpRequest, path: web::Path<(String, String)>) -> impl Responder {
     if path.0.len() > 64 || path.1.len() > 64 {
         return HttpResponse::BadRequest().finish();
     }
