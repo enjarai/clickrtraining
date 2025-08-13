@@ -75,7 +75,7 @@
             User = cfg.user;
             Group = cfg.group;
             WorkingDirectory = cfg.package;
-            ExecStart = "${cfg.package}/bin/clickrtraining";
+            ExecStart = "${cfg.package}/bin/clickrtraining host --addr ${cfg.address} --port ${cfg.port}";
             Restart = "always";
           };
         };
