@@ -38,11 +38,11 @@ pub async fn start(args: ClientArgs) -> Result<()> {
                 info!("Connected! HTTP response: {res:?}");
 
                 #[cfg(feature = "audio")]
-                let sink = {
-                    let (_stream, stream_handle) = rodio::OutputStream::try_default()?;
+                let (sink, _stream, _stream_handle) = {
+                    let (stream, stream_handle) = rodio::OutputStream::try_default()?;
                     let sink = rodio::Sink::try_new(&stream_handle)?;
                     sink.set_volume(args.volume);
-                    sink
+                    (sink, stream, stream_handle)
                 };
 
                 loop {
