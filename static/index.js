@@ -14,7 +14,7 @@ function updateInput(t) {
 }
 
 function listenButton(e) {
-    const info = document.querySelector("#listen-info");
+    const info = document.querySelector("#listen-info var");
 
     if (!ws) {
         ws = new WebSocket(`api/${id}/listen`);
@@ -39,7 +39,7 @@ function listenButton(e) {
             }
         };
         e.target.innerText = "Stop Listening";
-        info.innerText = `Listening on '${id}'`;
+        info.innerText = id;
     } else {
         ws.close();
         ws = null;
