@@ -39,13 +39,16 @@ struct Client {
     word: &'static str,
 }
 
+const ID_MAX_LENGTH: usize = 64;
+const PATH_MAX_LENGTH: usize = 64;
+
 #[get("/api/{id}/listen")]
 async fn listen(
     req: HttpRequest,
     stream: Payload,
     id: web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    if id.len() > 64 {
+    if id.len() > ID_MAX_LENGTH {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
@@ -67,7 +70,7 @@ async fn listen(
 
 #[get("/api/{id}/click")]
 async fn click(req: HttpRequest, id: web::Path<String>) -> impl Responder {
-    if id.len() > 64 {
+    if id.len() > ID_MAX_LENGTH {
         return HttpResponse::BadRequest().finish();
     }
 
@@ -85,7 +88,7 @@ async fn click(req: HttpRequest, id: web::Path<String>) -> impl Responder {
 
 #[get("/api/{id}/custom/{name}")]
 async fn custom_sound(req: HttpRequest, path: web::Path<(String, String)>) -> impl Responder {
-    if path.0.len() > 64 || path.1.len() > 64 {
+    if path.0.len() > ID_MAX_LENGTH || path.1.len() > PATH_MAX_LENGTH {
         return HttpResponse::BadRequest().finish();
     }
 
