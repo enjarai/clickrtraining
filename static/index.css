@@ -12,29 +12,37 @@ body {
 #container {
     background-color: #181115de;
     box-shadow: #000000 0 2px 6px;
+    margin: 8px; /* some space for the lovely shadow */ 
     border-radius: 20px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-#main {
+#container > div {
     padding: 20px;
+}
+
+main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 10px;
 }
 
-#footer {
+footer {
     padding: 20px;
     background-color: #221820de;
     display: flex;
-    gap: 8px
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-#main > input {
-    margin: 10px;
-    min-width: 400px;
+main > input {
+    width: min(
+        calc(100% - 20px), /* this = the max space - both side padding */
+        400px
+    );
     background-color: #665566;
     border: none;
     border-radius: 10px;
@@ -57,6 +65,15 @@ button:disabled {
 #listen-info {
     margin-top: 10px;
     color: wheat;
+    text-align: center;
+}
+
+#listen-info var {
+    word-wrap: anywhere;
+}
+
+#listen-info:has(var:empty) {
+    display: none;
 }
 
 #explanation ol li {
