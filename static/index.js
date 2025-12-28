@@ -1,7 +1,7 @@
 const SECOND = 1000;
 let id = "";
 let ws;
-let errorMessage;
+let errorTimeout;
 let clickTimeout;
 
 function changeInput(e) {
@@ -116,11 +116,11 @@ function setError(errorMessage) {
     if (errorMessage.length == 0)
         return;
 
-    if (errorMessage)
-        errorMessage = clearTimeout(errorMessage);
+    if (errorTimeout)
+        errorTimeout = clearTimeout(errorTimeout);
 
-    errorMessage = setTimeout(() => {
+    errorTimeout = setTimeout(() => {
         statusError.innerText = "";
-        errorMessage = null;
+        errorTimeout = null;
     }, 6.66 * SECOND);
 }
