@@ -58,6 +58,18 @@ button {
     border-radius: 10px;
 }
 
+button:not(:disabled) {
+    cursor: pointer;
+}
+
+button:hover:not(:active) {
+    box-shadow: #000000 2px 4px 4px;
+}
+
+button:active {
+    filter: saturate(2);
+}
+
 button:disabled {
     background-color: #252425;
 }
