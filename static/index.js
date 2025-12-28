@@ -1,5 +1,8 @@
+const SECOND = 1000;
 let id = "";
 let ws;
+let errTimeout;
+let clickTimeout;
 
 function changeInput(e) {
     updateInput(e.target);
@@ -49,11 +52,44 @@ function listenButton(e) {
 }
 
 async function clickButton(e) {
-    await fetch(`api/${id}/click`);
+    const statusError = document.querySelector("#action-error")
+    const response = await fetch(`api/${id}/click`);
+    let errorText = "";
+
+    if (clickTimeout)
+        clickTimeout = clearTimeout(clickTimeout)
+
     e.target.innerText = "Clicked!";
-    setTimeout(() => {
+
+    clickTimeout = setTimeout(() => {
         e.target.innerText = "Click";
-    }, 1000);
+        clickTimeout = null;
+    }, SECOND);
+
+    switch (response.status) {
+        case 200:
+            break;
+        case 404:
+            errorText = "The click echoed around but did not seem to reach anybody…";
+            break;
+        case 500:
+            errorText = "The clicker seems unable to be clicked and makes a crunch noise instead. Something seems broken inside…";
+            break;
+        default:
+            errorText = `[${response.status}] ${response.statusText}`;
+    }
+
+    statusError.innerHTML = errorText;
+
+    if (errorText.length == 0)
+        return
+    if (errTimeout)
+        errTimeout = clearTimeout(err)
+
+    errTimeout = setTimeout(() => {
+        statusError.innerText = "";
+        errTimeout = null;
+    }, 6.66 * SECOND);
 }
 
 const idInput = document.querySelector("#id-input");

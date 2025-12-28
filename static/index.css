@@ -62,17 +62,21 @@ button:disabled {
     background-color: #252425;
 }
 
-#listen-info {
+#listen-info, #action-error {
     margin-top: 10px;
     color: wheat;
     text-align: center;
+}
+
+#action-error {
+    color: palevioletred;
 }
 
 #listen-info var {
     word-wrap: anywhere;
 }
 
-#listen-info:has(var:empty) {
+#listen-info:has(var:empty), #action-error:is(:empty) {
     display: none;
 }
 
