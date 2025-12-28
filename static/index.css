@@ -62,7 +62,7 @@ button:not(:disabled) {
     cursor: pointer;
 }
 
-button:hover:not(:active) {
+button:hover:not(:active, :disabled) {
     box-shadow: #000000 2px 4px 4px;
 }
 
