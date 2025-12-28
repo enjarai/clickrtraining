@@ -1,7 +1,7 @@
 const SECOND = 1000;
 let id = "";
 let ws;
-let errTimeout;
+let errorMessage;
 let clickTimeout;
 
 function changeInput(e) {
@@ -52,9 +52,18 @@ function listenButton(e) {
 }
 
 async function clickButton(e) {
-    const statusError = document.querySelector("#action-error")
-    const response = await fetch(`api/${id}/click`);
+    /**
+     * @param {response} response Fetch response.
+     */
+    let response;
     let errorText = "";
+
+    try {
+        response = await fetch(`api/${id}/click`)
+    } catch (error) {
+        console.error(error);
+        return setError("Unable to reach the clicker. It seems out of interweb range…");
+    }
 
     if (clickTimeout)
         clickTimeout = clearTimeout(clickTimeout)
@@ -79,17 +88,7 @@ async function clickButton(e) {
             errorText = `[${response.status}] ${response.statusText}`;
     }
 
-    statusError.innerHTML = errorText;
-
-    if (errorText.length == 0)
-        return
-    if (errTimeout)
-        errTimeout = clearTimeout(err)
-
-    errTimeout = setTimeout(() => {
-        statusError.innerText = "";
-        errTimeout = null;
-    }, 6.66 * SECOND);
+    setError(errorText)
 }
 
 const idInput = document.querySelector("#id-input");
@@ -102,3 +101,26 @@ setInterval(() => {
 document.querySelectorAll(".id-button").forEach(el => {
     el.disabled = true;
 });
+
+/**
+ * Set error message for user to auto-clear automatically.
+ * 
+ * @param {string} errorMessage message to display
+ * @returns {void}
+ */
+function setError(errorMessage) {
+    const statusError = document.querySelector("#action-error");
+
+    statusError.innerHTML = errorMessage;
+
+    if (errorMessage.length == 0)
+        return;
+
+    if (errorMessage)
+        errorMessage = clearTimeout(errorMessage);
+
+    errorMessage = setTimeout(() => {
+        statusError.innerText = "";
+        errorMessage = null;
+    }, 6.66 * SECOND);
+}
