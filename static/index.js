@@ -1,7 +1,16 @@
 const SECOND = 1000;
 let id = "";
-let ws;
+/**
+ * @type {WebSocket | null} Active socket.
+ */
+let ws = null;
+/**
+ * @type {number} identifier of auto clear error message timeout.
+ */
 let errorTimeout;
+/**
+ * @type {number} identifier of click button state reset timeout.
+ */
 let clickTimeout;
 
 function changeInput(e) {
@@ -53,7 +62,7 @@ function listenButton(e) {
 
 async function clickButton(e) {
     /**
-     * @param {response} response Fetch response.
+     * @type {Response} Fetch response.
      */
     let response;
     let errorText = "";
@@ -109,9 +118,9 @@ document.querySelectorAll(".id-button").forEach(el => {
  * @returns {void}
  */
 function setError(errorMessage) {
-    const statusError = document.querySelector("#action-error");
+    const errorElement = document.querySelector("#action-error");
 
-    statusError.innerHTML = errorMessage;
+    errorElement.innerHTML = errorMessage;
 
     if (errorMessage.length == 0)
         return;
@@ -120,7 +129,7 @@ function setError(errorMessage) {
         errorTimeout = clearTimeout(errorTimeout);
 
     errorTimeout = setTimeout(() => {
-        statusError.innerText = "";
+        errorElement.innerText = "";
         errorTimeout = null;
     }, 6.66 * SECOND);
 }
