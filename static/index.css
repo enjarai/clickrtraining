@@ -64,7 +64,7 @@ button {
     border-radius: 10px;
 }
 
-button:not(:disabled) {
+button:not(:disabled, .thinking) {
     cursor: pointer;
 }
 
@@ -79,6 +79,10 @@ button:active {
 button:disabled {
     background-color: #252425;
     color: graytext; /* To make chrome styled like the fox */
+}
+
+.thinking {
+    cursor: progress;
 }
 
 #listen-info, #action-error {

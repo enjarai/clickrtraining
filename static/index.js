@@ -41,26 +41,32 @@ function handleListenButton() {
 
 async function handleClickButton(e) {
     const encodedId = encodeURIComponent(id);
+    const clickButton = e.target;
     /**
      * @type {Response} Fetch response.
      */
     let response;
     let errorText = "";
 
+    clickButton.classList.add("thinking");
+    clickButton.innerText = "Click…";
+
     try {
         response = await fetch(`api/${encodedId}/click`)
     } catch (error) {
         console.error(error);
         return setError(MESSAGE_CONNECTION_ERROR);
+    } finally {
+        clickButton.classList.remove("thinking");
     }
 
     if (clickTimeout)
         clickTimeout = clearTimeout(clickTimeout)
 
-    e.target.innerText = "Clicked!";
+    clickButton.innerText = "Clicked!";
 
     clickTimeout = setTimeout(() => {
-        e.target.innerText = "Click";
+        clickButton.innerText = "Click";
         clickTimeout = null;
     }, SECOND);
 
