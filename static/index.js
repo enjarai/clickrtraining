@@ -134,7 +134,7 @@ function clearListenSocket() {
  */
 function startListenSocket(listenId, reconnectCount = 0) {
     const encodedId = encodeURIComponent(listenId);
-    let hadOpened = reconnectCount == 0;
+    let hadOpened = reconnectCount != 0;
 
     listenButtonElement.innerText = "Stop Listening";
     listenKeyInfoElement.innerText = listenId;
@@ -144,7 +144,7 @@ function startListenSocket(listenId, reconnectCount = 0) {
     thisSocket.onclose = (event) => {
         if (event.wasClean){
             if (thisSocket === listenSocket)
-                clearListenSocket(handleListenButton);
+                clearListenSocket();
             return 
         }
         console.error(event);
@@ -154,7 +154,10 @@ function startListenSocket(listenId, reconnectCount = 0) {
             // seem to know which one. Only getting the 1006 unusual disconnect.
             // Todo; might need to add a check end-point to see if the ID is a
             //      valid key to listen too first before connecting.
-            setError(`${MESSAGE_CONNECTION_ERROR} but there might be other issues?`)
+            setError(`${MESSAGE_CONNECTION_ERROR} but there might be other issues?`);
+            
+            clearListenSocket();
+            return;
         }
 
         if (thisSocket !== listenSocket) {
