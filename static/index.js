@@ -1,11 +1,11 @@
 const SECOND = 1000;
 const MESSAGE_CONNECTION_ERROR = "Unable to reach the clicker. It seems out of interweb range…";
 
+const idInputElement = document.querySelector("#id-input");
 const listenKeyInfoElement = document.querySelector("#listen-info var");
 const listenStateInfoElement = document.querySelector("#listen-info .state");
 const listenButtonElement = document.querySelector("button.listen");
 
-let id = "";
 /**
  * @type {WebSocket | null} The active clicker listen socket.
  */
@@ -19,19 +19,25 @@ let errorTimeout;
  */
 let clickTimeout;
 
-function changeInput(e) {
-    updateInput(e.target);
-}
 
-function updateInput(t) {
-    id = t.value;
-    // localStorage.setItem("id", id);
+
+setInterval(() => {
+    updateButtons();
+}, 500);
+
+
+
+function updateButtons() {
+    const id = idInputElement.value;
+
     document.querySelectorAll(".id-button").forEach(el => {
         el.disabled = id.length <= 0;
     });
 }
 
 function handleListenButton() {
+    const id = idInputElement.value;
+
     if (listenSocket != null) {
         clearListenSocket();
         return;
@@ -40,6 +46,7 @@ function handleListenButton() {
 }
 
 async function handleClickButton(e) {
+    const id = idInputElement.value;
     const encodedId = encodeURIComponent(id);
     const clickButton = e.target;
     /**
@@ -86,17 +93,6 @@ async function handleClickButton(e) {
     setError(errorText)
 }
 
-const idInput = document.querySelector("#id-input");
-
-setInterval(() => {
-    updateInput(idInput);
-}, 500);
-
-// document.querySelector("#id-input").value = "";
-document.querySelectorAll(".id-button").forEach(el => {
-    el.disabled = true;
-});
-
 /**
  * Set error message for user to auto-clear automatically.
  * 
@@ -141,7 +137,7 @@ function startListenSocket(listenId, reconnectCount = 0) {
     let hadOpened = reconnectCount == 0;
 
     listenButtonElement.innerText = "Stop Listening";
-    listenKeyInfoElement.innerText = id;
+    listenKeyInfoElement.innerText = listenId;
     listenStateInfoElement.innerText = "Tuning into";
 
     thisSocket = new WebSocket(`api/${encodedId}/listen`);
@@ -168,6 +164,7 @@ function startListenSocket(listenId, reconnectCount = 0) {
         }
 
         // Disconnected for some reason
+        // Todo: incremental back-off & disconnect error message
         startListenSocket(listenId, ++reconnectCount);
     }
     thisSocket.onopen = () => {
