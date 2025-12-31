@@ -1,9 +1,15 @@
 const SECOND = 1000;
+const MESSAGE_CONNECTION_ERROR = "Unable to reach the clicker. It seems out of interweb range…";
+
+const listenKeyInfoElement = document.querySelector("#listen-info var");
+const listenStateInfoElement = document.querySelector("#listen-info .state");
+const listenButtonElement = document.querySelector("button.listen");
+
 let id = "";
 /**
- * @type {WebSocket | null} Active socket.
+ * @type {WebSocket | null} The active clicker listen socket.
  */
-let ws = null;
+let listenSocket = null;
 /**
  * @type {number} identifier of auto clear error message timeout.
  */
@@ -25,42 +31,16 @@ function updateInput(t) {
     });
 }
 
-function listenButton(e) {
-    const info = document.querySelector("#listen-info var");
-
-    if (!ws) {
-        ws = new WebSocket(`api/${id}/listen`);
-        ws.onopen = (event) => {
-            ws.onmessage = (event) => {
-                console.log(event.data);
-                if (event.data === "c") {
-                    let audio = new Audio('sound.ogg');
-                    audio.play();
-                }
-            };
-
-            ws.onclose = () => {
-                ws = null;
-                e.target.innerText = "Listen";
-                info.innerText = "";
-            }
-            ws.onerror = () => {
-                ws = null;
-                e.target.innerText = "Listen";
-                info.innerText = "";
-            }
-        };
-        e.target.innerText = "Stop Listening";
-        info.innerText = id;
-    } else {
-        ws.close();
-        ws = null;
-        e.target.innerText = "Listen";                
-        info.innerText = "";
+function handleListenButton() {
+    if (listenSocket != null) {
+        clearListenSocket();
+        return;
     }
+    startListenSocket(id);
 }
 
-async function clickButton(e) {
+async function handleClickButton(e) {
+    const encodedId = encodeURIComponent(id);
     /**
      * @type {Response} Fetch response.
      */
@@ -68,10 +48,10 @@ async function clickButton(e) {
     let errorText = "";
 
     try {
-        response = await fetch(`api/${id}/click`)
+        response = await fetch(`api/${encodedId}/click`)
     } catch (error) {
         console.error(error);
-        return setError("Unable to reach the clicker. It seems out of interweb range…");
+        return setError(MESSAGE_CONNECTION_ERROR);
     }
 
     if (clickTimeout)
@@ -132,4 +112,69 @@ function setError(errorMessage) {
         errorElement.innerText = "";
         errorTimeout = null;
     }, 6.66 * SECOND);
+}
+
+/**
+ * Clears the currently active socket
+ */
+function clearListenSocket() {
+    if (listenSocket != null)
+        listenSocket.close();
+
+    listenSocket = null;
+    listenButtonElement.innerText = "Listen";
+    listenKeyInfoElement.innerText = "";
+}
+
+/**
+ * @param {string} listenId The clicker ID to listen to.
+ * @param {number} reconnectCount 
+ */
+function startListenSocket(listenId, reconnectCount = 0) {
+    const encodedId = encodeURIComponent(listenId);
+    let hadOpened = reconnectCount == 0;
+
+    listenButtonElement.innerText = "Stop Listening";
+    listenKeyInfoElement.innerText = id;
+    listenStateInfoElement.innerText = "Tuning into";
+
+    thisSocket = new WebSocket(`api/${encodedId}/listen`);
+    thisSocket.onclose = (event) => {
+        if (event.wasClean){
+            if (thisSocket === listenSocket)
+                clearListenSocket(handleListenButton);
+            return 
+        }
+        console.error(event);
+
+        if (!hadOpened) {
+            // This can be due to a 400, 500 or a network failure but can't
+            // seem to know which one. Only getting the 1006 unusual disconnect.
+            // Todo; might need to add a check end-point to see if the ID is a
+            //      valid key to listen too first before connecting.
+            setError(`${MESSAGE_CONNECTION_ERROR} but there might be other issues?`)
+        }
+
+        if (thisSocket !== listenSocket) {
+            // This is not the active listen socket anymore, likely has been replaced
+            // and not properly closed up until now. Nothing left to do.
+            return;
+        }
+
+        // Disconnected for some reason
+        startListenSocket(listenId, ++reconnectCount);
+    }
+    thisSocket.onopen = () => {
+        hadOpened = true;
+        reconnectCount = 0;
+        listenStateInfoElement.innerText = "Listening on";
+    }
+    thisSocket.onmessage = (event) => {
+        console.log(event.data);
+        if (event.data === "c") {
+            let audio = new Audio('sound.ogg');
+            audio.play();
+        }
+    };
+    listenSocket = thisSocket;
 }
