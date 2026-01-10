@@ -130,8 +130,10 @@ function clearListenSocket() {
     if (listenSocket != null)
         listenSocket.close();
 
-    if (reconnectScheduleId)
+    if (reconnectScheduleId) {
         clearInterval(reconnectScheduleId);
+        reconnectScheduleId = null;
+    }
 
     listenSocket = null;
     listenButtonElement.innerText = "Listen";
@@ -178,15 +180,16 @@ function startListenSocket(listenId, reconnectCount = 0) {
 
         // Disconnected for some reason
         let reconnectInSeconds = calculateBackoffDelaySeconds(reconnectCount);
-        listenStateInfoElement.innerText =
-            `Waiting ${reconnectInSeconds} seconds before retuning into`;
 
         // Extra time for error to prevent blinking with repeated connection failures (hopefully)
         setError("Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა", reconnectInSeconds + 1);
 
         reconnectScheduleId = setTimeout(() => {
             startListenSocket(listenId, ++reconnectCount);
+            reconnectScheduleId = null;
         }, reconnectInSeconds * SECOND);
+
+        setReconnectMessage(Date.now() / SECOND + reconnectInSeconds, reconnectScheduleId)
     }
     thisSocket.onopen = () => {
         hadOpened = true;
@@ -207,7 +210,8 @@ function startListenSocket(listenId, reconnectCount = 0) {
  * Calculates the back-off delay in seconds based on the formula
  * $\frac{1}{scalingFactor}*2^{reconnectionCount}$ limited by maxDelay
  * 
- * @param {number} reconnectionCount whole number of total reconnection since astablished connection 
+ * @param {number} reconnectionCount whole number of total reconnection since successfully
+ *                  established connection.
  * @return a float of seconds to wait before re-connecting
  */
 function calculateBackoffDelaySeconds(reconnectionCount) {
@@ -222,3 +226,31 @@ function calculateBackoffDelaySeconds(reconnectionCount) {
         maxDelaySeconds
     );
 };
+
+/**
+ * Sets the listen state to the reconnect message which dynamically shows in how much
+ * time it will try and reconnect to the server.
+ * 
+ * @param {number} reconnectOnTimestamp second unix timestamp on which time it will
+ *                  try reconnecting
+ * @param {number} referenceSchedulerId ID of the scheduled timeout as reference for
+ *                  seeing if this message is still relevant to update or if another
+ *                  connection has surpassed it.
+ * @returns {void}
+ */
+function setReconnectMessage(reconnectOnTimestamp, referenceSchedulerId) {
+    const timeLeft = reconnectOnTimestamp - Date.now() / SECOND;
+
+    if (reconnectScheduleId !== referenceSchedulerId)
+        return;
+
+    console.log(reconnectScheduleId, reconnectOnTimestamp)
+
+    // ToDo; This but with a bit more detail on lower numbers. This is good for big numbers
+    listenStateInfoElement.innerText =
+        `Waiting ${Math.round(timeLeft)} seconds before retuning into`;
+
+    setTimeout(() => requestAnimationFrame(() =>
+        setReconnectMessage(reconnectOnTimestamp, referenceSchedulerId)
+    ), SECOND);
+}
