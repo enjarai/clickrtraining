@@ -11,13 +11,17 @@ const listenButtonElement = document.querySelector("button.listen");
  */
 let listenSocket = null;
 /**
- * @type {number} identifier of auto clear error message timeout.
+ * @type {number?} The timeout ID of the schedule to reconnect.
  */
-let errorTimeout;
+let reconnectScheduleId;
 /**
- * @type {number} identifier of click button state reset timeout.
+ * @type {number?} identifier of auto clear error message timeout.
  */
-let clickTimeout;
+let errorMessageTimeout;
+/**
+ * @type {number?} identifier of click button state reset timeout.
+ */
+let clickMessageTimeout;
 
 
 
@@ -67,14 +71,14 @@ async function handleClickButton(e) {
         clickButton.classList.remove("thinking");
     }
 
-    if (clickTimeout)
-        clickTimeout = clearTimeout(clickTimeout)
+    if (clickMessageTimeout)
+        clickMessageTimeout = clearTimeout(clickMessageTimeout)
 
     clickButton.innerText = "Clicked!";
 
-    clickTimeout = setTimeout(() => {
+    clickMessageTimeout = setTimeout(() => {
         clickButton.innerText = "Click";
-        clickTimeout = null;
+        clickMessageTimeout = null;
     }, SECOND);
 
     switch (response.status) {
@@ -97,9 +101,12 @@ async function handleClickButton(e) {
  * Set error message for user to auto-clear automatically.
  * 
  * @param {string} errorMessage message to display
+ * @param {number} clearAfterSeconds Amount of seconds to wait before clearing 
+ *                      the error message if not overwritten by another shown with
+ *                      this function.
  * @returns {void}
  */
-function setError(errorMessage) {
+function setError(errorMessage, clearAfterSeconds = 6.66) {
     const errorElement = document.querySelector("#action-error");
 
     errorElement.innerHTML = errorMessage;
@@ -107,13 +114,13 @@ function setError(errorMessage) {
     if (errorMessage.length == 0)
         return;
 
-    if (errorTimeout)
-        errorTimeout = clearTimeout(errorTimeout);
+    if (errorMessageTimeout)
+        errorMessageTimeout = clearTimeout(errorMessageTimeout);
 
-    errorTimeout = setTimeout(() => {
+    errorMessageTimeout = setTimeout(() => {
         errorElement.innerText = "";
-        errorTimeout = null;
-    }, 6.66 * SECOND);
+        errorMessageTimeout = null;
+    }, clearAfterSeconds * SECOND);
 }
 
 /**
@@ -122,6 +129,9 @@ function setError(errorMessage) {
 function clearListenSocket() {
     if (listenSocket != null)
         listenSocket.close();
+
+    if (reconnectScheduleId)
+        clearInterval(reconnectScheduleId);
 
     listenSocket = null;
     listenButtonElement.innerText = "Listen";
@@ -140,12 +150,12 @@ function startListenSocket(listenId, reconnectCount = 0) {
     listenKeyInfoElement.innerText = listenId;
     listenStateInfoElement.innerText = "Tuning into";
 
-    thisSocket = new WebSocket(`api/${encodedId}/listen`);
+    const thisSocket = new WebSocket(`api/${encodedId}/listen`);
     thisSocket.onclose = (event) => {
-        if (event.wasClean){
+        if (event.wasClean) {
             if (thisSocket === listenSocket)
                 clearListenSocket();
-            return 
+            return
         }
         console.error(event);
 
@@ -155,7 +165,7 @@ function startListenSocket(listenId, reconnectCount = 0) {
             // Todo; might need to add a check end-point to see if the ID is a
             //      valid key to listen too first before connecting.
             setError(`${MESSAGE_CONNECTION_ERROR} but there might be other issues?`);
-            
+
             clearListenSocket();
             return;
         }
@@ -167,8 +177,16 @@ function startListenSocket(listenId, reconnectCount = 0) {
         }
 
         // Disconnected for some reason
-        // Todo: incremental back-off & disconnect error message
-        startListenSocket(listenId, ++reconnectCount);
+        let reconnectInSeconds = calculateBackoffDelaySeconds(reconnectCount);
+        listenStateInfoElement.innerText =
+            `Waiting ${reconnectInSeconds} seconds before retuning into`;
+
+        // Extra time for error to prevent blinking with repeated connection failures (hopefully)
+        setError("Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა", reconnectInSeconds + 1);
+
+        reconnectScheduleId = setTimeout(() => {
+            startListenSocket(listenId, ++reconnectCount);
+        }, reconnectInSeconds * SECOND);
     }
     thisSocket.onopen = () => {
         hadOpened = true;
@@ -184,3 +202,23 @@ function startListenSocket(listenId, reconnectCount = 0) {
     };
     listenSocket = thisSocket;
 }
+
+/**
+ * Calculates the back-off delay in seconds based on the formula
+ * $\frac{1}{scalingFactor}*2^{reconnectionCount}$ limited by maxDelay
+ * 
+ * @param {number} reconnectionCount whole number of total reconnection since astablished connection 
+ * @return a float of seconds to wait before re-connecting
+ */
+function calculateBackoffDelaySeconds(reconnectionCount) {
+    const maxDelaySeconds = 300
+    /**
+     * factor by which to reduce the scaling effect.
+     */
+    const scalingFactor = 2;
+
+    return Math.min(
+        (1 / scalingFactor) * Math.pow(2, reconnectionCount),
+        maxDelaySeconds
+    );
+};
