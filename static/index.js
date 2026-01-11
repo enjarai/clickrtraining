@@ -101,12 +101,12 @@ async function handleClickButton(e) {
  * Set error message for user to auto-clear automatically.
  * 
  * @param {string} errorMessage message to display
- * @param {number} clearAfterSeconds Amount of seconds to wait before clearing 
+ * @param {number} clearAfter Amount of milliseconds to wait before clearing 
  *                      the error message if not overwritten by another shown with
  *                      this function.
  * @returns {void}
  */
-function setError(errorMessage, clearAfterSeconds = 6.66) {
+function setError(errorMessage, clearAfter = 6.66 * SECOND) {
     const errorElement = document.querySelector("#action-error");
 
     errorElement.innerHTML = errorMessage;
@@ -120,7 +120,7 @@ function setError(errorMessage, clearAfterSeconds = 6.66) {
     errorMessageTimeout = setTimeout(() => {
         errorElement.innerText = "";
         errorMessageTimeout = null;
-    }, clearAfterSeconds * SECOND);
+    }, clearAfter);
 }
 
 /**
@@ -178,18 +178,18 @@ function startListenSocket(listenId, reconnectCount = 0) {
             return;
         }
 
-        // Disconnected for some reason
-        let reconnectInSeconds = calculateBackoffDelaySeconds(reconnectCount);
+        // -- Disconnected for some reason
+        let reconnectInMilliSeconds = calculateBackoffDelaySeconds(reconnectCount) * SECOND;
 
         // Extra time for error to prevent blinking with repeated connection failures (hopefully)
-        setError("Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა", reconnectInSeconds + 1);
+        setError("Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა", reconnectInMilliSeconds + SECOND);
 
         reconnectScheduleId = setTimeout(() => {
             startListenSocket(listenId, ++reconnectCount);
             reconnectScheduleId = null;
-        }, reconnectInSeconds * SECOND);
+        }, reconnectInMilliSeconds);
 
-        setReconnectMessage(Date.now() / SECOND + reconnectInSeconds, reconnectScheduleId)
+        setReconnectMessage(Date.now() + reconnectInMilliSeconds, reconnectScheduleId)
     }
     thisSocket.onopen = () => {
         hadOpened = true;
@@ -229,28 +229,34 @@ function calculateBackoffDelaySeconds(reconnectionCount) {
 
 /**
  * Sets the listen state to the reconnect message which dynamically shows in how much
- * time it will try and reconnect to the server.
+ * time it will try and reconnect to the server. This only updates after initial set
+ * with animation frames aka when the page is being viewed.
  * 
- * @param {number} reconnectOnTimestamp second unix timestamp on which time it will
- *                  try reconnecting
+ * @param {number} reconnectOnTimestamp millisecond unix timestamp since midnight,
+ *                  January 1, 1970 Universal Coordinated Time (UTC) on which time it will
+ *                  try reconnecting.
  * @param {number} referenceSchedulerId ID of the scheduled timeout as reference for
  *                  seeing if this message is still relevant to update or if another
  *                  connection has surpassed it.
  * @returns {void}
  */
 function setReconnectMessage(reconnectOnTimestamp, referenceSchedulerId) {
-    const timeLeft = reconnectOnTimestamp - Date.now() / SECOND;
+    const secondsLeft = (reconnectOnTimestamp - Date.now()) / SECOND;
+    let detail = 0
+    let updateInMs = SECOND;
 
     if (reconnectScheduleId !== referenceSchedulerId)
         return;
 
-    console.log(reconnectScheduleId, reconnectOnTimestamp)
+    if (secondsLeft.toFixed(1) < 10) {
+        detail = 1;
+        updateInMs = 100;
+    }
 
-    // ToDo; This but with a bit more detail on lower numbers. This is good for big numbers
-    listenStateInfoElement.innerText =
-        `Waiting ${Math.round(timeLeft)} seconds before retuning into`;
+    listenStateInfoElement.innerHTML =
+        `Waiting <var>${secondsLeft.toFixed(detail)}</var> seconds before retuning into`;
 
     setTimeout(() => requestAnimationFrame(() =>
         setReconnectMessage(reconnectOnTimestamp, referenceSchedulerId)
-    ), SECOND);
+    ), updateInMs);
 }
