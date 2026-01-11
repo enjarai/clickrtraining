@@ -1,10 +1,12 @@
 const SECOND = 1000;
 const MESSAGE_CONNECTION_ERROR = "Unable to reach the clicker. It seems out of interweb range…";
+const MESSAGE_LISTEN_DISCONNECT = "Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა";
 
 const idInputElement = document.querySelector("#id-input");
 const listenKeyInfoElement = document.querySelector("#listen-info var");
 const listenStateInfoElement = document.querySelector("#listen-info .state");
 const listenButtonElement = document.querySelector("button.listen");
+const errorMessageElement = document.querySelector("#action-error");
 
 /**
  * @type {WebSocket | null} The active clicker listen socket.
@@ -107,18 +109,16 @@ async function handleClickButton(e) {
  * @returns {void}
  */
 function setError(errorMessage, clearAfter = 6.66 * SECOND) {
-    const errorElement = document.querySelector("#action-error");
+    if (errorMessageTimeout)
+        errorMessageTimeout = clearTimeout(errorMessageTimeout);
 
-    errorElement.innerHTML = errorMessage;
+    errorMessageElement.innerHTML = errorMessage;
 
     if (errorMessage.length == 0)
         return;
 
-    if (errorMessageTimeout)
-        errorMessageTimeout = clearTimeout(errorMessageTimeout);
-
     errorMessageTimeout = setTimeout(() => {
-        errorElement.innerText = "";
+        errorMessageElement.innerText = "";
         errorMessageTimeout = null;
     }, clearAfter);
 }
@@ -133,6 +133,9 @@ function clearListenSocket() {
     if (reconnectScheduleId) {
         clearInterval(reconnectScheduleId);
         reconnectScheduleId = null;
+        
+        if (errorMessageElement.innerText == MESSAGE_LISTEN_DISCONNECT)
+            setError("");
     }
 
     listenSocket = null;
@@ -146,7 +149,7 @@ function clearListenSocket() {
  */
 function startListenSocket(listenId, reconnectCount = 0) {
     const encodedId = encodeURIComponent(listenId);
-    let hadOpened = reconnectCount != 0;
+    let wasOpened = reconnectCount != 0;
 
     listenButtonElement.innerText = "Stop Listening";
     listenKeyInfoElement.innerText = listenId;
@@ -161,11 +164,9 @@ function startListenSocket(listenId, reconnectCount = 0) {
         }
         console.error(event);
 
-        if (!hadOpened) {
+        if (!wasOpened) {
             // This can be due to a 400, 500 or a network failure but can't
             // seem to know which one. Only getting the 1006 unusual disconnect.
-            // Todo; might need to add a check end-point to see if the ID is a
-            //      valid key to listen too first before connecting.
             setError(`${MESSAGE_CONNECTION_ERROR} but there might be other issues?`);
 
             clearListenSocket();
@@ -182,7 +183,7 @@ function startListenSocket(listenId, reconnectCount = 0) {
         let reconnectInMilliSeconds = calculateBackoffDelaySeconds(reconnectCount) * SECOND;
 
         // Extra time for error to prevent blinking with repeated connection failures (hopefully)
-        setError("Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა", reconnectInMilliSeconds + SECOND);
+        setError(MESSAGE_LISTEN_DISCONNECT, reconnectInMilliSeconds + SECOND);
 
         reconnectScheduleId = setTimeout(() => {
             startListenSocket(listenId, ++reconnectCount);
@@ -192,7 +193,7 @@ function startListenSocket(listenId, reconnectCount = 0) {
         setReconnectMessage(Date.now() + reconnectInMilliSeconds, reconnectScheduleId)
     }
     thisSocket.onopen = () => {
-        hadOpened = true;
+        wasOpened = true;
         reconnectCount = 0;
         listenStateInfoElement.innerText = "Listening on";
     }
