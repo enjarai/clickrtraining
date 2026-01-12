@@ -1,4 +1,5 @@
 const SECOND = 1000;
+const CLICK_TIMEOUT = 4 * SECOND;
 const MESSAGE_CONNECTION_ERROR = "Unable to reach the clicker. It seems out of interweb range…";
 const MESSAGE_LISTEN_DISCONNECT = "Lost connection to The Clickrnet™ ૮ ⚆ﻌ⚆ა";
 
@@ -73,7 +74,12 @@ async function handleClickButton(e) {
     clickButton.innerText = "Click…";
 
     try {
-        response = await fetch(`api/${encodedId}/click`)
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), CLICK_TIMEOUT);
+
+        response = await fetch(`api/${encodedId}/click`, {
+            signal: controller.signal
+        });
     } catch (error) {
         hadError = true;
         console.error(error);
