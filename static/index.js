@@ -55,11 +55,19 @@ async function handleClickButton(e) {
     const id = idInputElement.value;
     const encodedId = encodeURIComponent(id);
     const clickButton = e.target;
+    const buttonTextReset = () => {
+        clickButton.innerText = "Click";
+        clickMessageTimeout = null;
+    };
     /**
      * @type {Response} Fetch response.
      */
     let response;
+    let hadError = false;
     let errorText = "";
+
+    if (clickMessageTimeout)
+        clickMessageTimeout = clearTimeout(clickMessageTimeout);
 
     clickButton.classList.add("thinking");
     clickButton.innerText = "Click…";
@@ -67,21 +75,20 @@ async function handleClickButton(e) {
     try {
         response = await fetch(`api/${encodedId}/click`)
     } catch (error) {
+        hadError = true;
         console.error(error);
-        return setError(MESSAGE_CONNECTION_ERROR);
+        setError(MESSAGE_CONNECTION_ERROR);
     } finally {
         clickButton.classList.remove("thinking");
+        
+        if (hadError) {
+            buttonTextReset()
+            return;
+        }
     }
 
-    if (clickMessageTimeout)
-        clickMessageTimeout = clearTimeout(clickMessageTimeout)
-
     clickButton.innerText = "Clicked!";
-
-    clickMessageTimeout = setTimeout(() => {
-        clickButton.innerText = "Click";
-        clickMessageTimeout = null;
-    }, SECOND);
+    clickMessageTimeout = setTimeout(buttonTextReset, SECOND);
 
     switch (response.status) {
         case 200:

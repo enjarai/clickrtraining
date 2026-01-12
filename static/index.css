@@ -68,7 +68,7 @@ button:not(:disabled, .thinking) {
     cursor: pointer;
 }
 
-button:hover:not(:active, :disabled) {
+button:hover:not(:active, :disabled, .thinking) {
     box-shadow: #000000 2px 4px 4px;
 }
 
@@ -76,7 +76,7 @@ button:active {
     filter: saturate(2);
 }
 
-button:disabled {
+button:is(:disabled, .thinking) {
     background-color: #252425;
     color: graytext; /* To make chrome styled like the fox */
 }
