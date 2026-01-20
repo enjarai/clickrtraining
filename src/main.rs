@@ -54,7 +54,7 @@ struct ClientArgs {
     #[arg(short, long, help = "The room identifier")]
     id: String,
     #[arg(
-        short,
+        short='l',
         long,
         default_value_t = 1.0,
         help = "The volume at which to play the clicks"
