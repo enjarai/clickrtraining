@@ -50,6 +50,12 @@ main > input {
     padding: 10px;
 }
 
+
+::placeholder, ::-webkit-input-placeholder {
+    /* Shadow dom shenanigans to make chrome use the same styling as Firefox */
+    color: color-mix(in srgb, currentColor 54%, transparent); /* taken from Firefox browser styling */
+}
+
 button {
     margin: 5px;
     padding: 5px;
@@ -58,21 +64,42 @@ button {
     border-radius: 10px;
 }
 
-button:disabled {
-    background-color: #252425;
+button:not(:disabled, .thinking) {
+    cursor: pointer;
 }
 
-#listen-info {
+button:hover:not(:active, :disabled, .thinking) {
+    box-shadow: #000000 2px 4px 4px;
+}
+
+button:active {
+    filter: saturate(2);
+}
+
+button:is(:disabled, .thinking) {
+    background-color: #252425;
+    color: graytext; /* To make chrome styled like the fox */
+}
+
+.thinking {
+    cursor: progress;
+}
+
+#listen-info, #action-error {
     margin-top: 10px;
     color: wheat;
     text-align: center;
+}
+
+#action-error {
+    color: palevioletred;
 }
 
 #listen-info var {
     word-wrap: anywhere;
 }
 
-#listen-info:has(var:empty) {
+#listen-info:has(var:empty), #action-error:is(:empty) {
     display: none;
 }
 
